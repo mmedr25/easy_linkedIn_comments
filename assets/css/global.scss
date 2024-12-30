@@ -1,0 +1,23 @@
+body {
+    border: 8px solid green;
+}
+
+main {
+    .comments-comment-social-bar--cr {
+        position: relative;
+        
+        .easy-comment-popup {
+            position: absolute;
+            background: white;
+            width: 400px;
+            height: 300px;
+            padding: 1em;
+            box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            z-index: 9999;
+            bottom: 0px;
+            right: 0px;
+        }
+    }
+
+}

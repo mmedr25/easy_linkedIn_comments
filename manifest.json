@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "LinkedIn Easy Comments",
+  "version": "1.0",
+
+  "description": "Use ai tools to reply to lindkedIn comments",
+
+  "icons": {
+    "48": "assets/icons/logo.svg",
+    "96": "assets/icons/logo.svg"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://*.linkedin.com/*"],
+      "js": ["dist/index.js"],
+      "css": ["assets/css/global.css"]
+    }
+  ]
+}

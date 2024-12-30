@@ -1,0 +1,9 @@
+services:
+
+  ollama: 
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - 8080:80
+    volumes:
+      - ./assets/models:/usr/src/app/models
