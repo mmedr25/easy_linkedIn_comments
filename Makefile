@@ -3,9 +3,12 @@ dev:
 	@$(MAKE) -j2 css watch
 
 
+ts:
+	bun build src/**/*.ts --outdir dist --watch
+
 # plugin
 watch:
-	bun build src/index.ts --outdir dist --watch
+	web-ext run
 
 
 # style
