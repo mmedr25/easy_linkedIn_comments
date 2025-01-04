@@ -22,9 +22,11 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
-    //
+    "noPropertyAccessFromIndexSignature": false,
+
+    // My config
+    "outDir": "./dist",
+    "rootDir": "./src",
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"]
 }

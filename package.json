@@ -2,6 +2,10 @@
   "name": "linkedin_easy_comments",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "build": "bun run build",
+    "build-extension": "bun run build && web-ext build --source-dir=dist --overwrite-dest"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
