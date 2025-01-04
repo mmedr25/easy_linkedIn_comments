@@ -1,6 +1,4 @@
-console.log("Background script loaded!");
-// src/api/ollama.ts
-var generatePrePromptString = (prePrompts) => {
+const generatePrePromptString = (prePrompts) => {
     if (!prePrompts.length) {
       return "";
     }
@@ -10,36 +8,57 @@ var generatePrePromptString = (prePrompts) => {
     return newPrePrompts.join(".");
 };
   
-var generatePrompt = (prompt, prePrompts) => {
+const generatePrompt = (prompt, prePrompts) => {
     const prePromptsString = generatePrePromptString(prePrompts);
     return `System:${prePromptsString} User:${prompt}`;
 };
 
-let abortController; // Keep a reference to the current AbortController
 
 
-var apiUrl = "http://localhost:11434";
-var singleResponse = async (prompt) => {
-    const url = `${apiUrl}/api/generate`;
-    // const prompt = "je commence un nouveau projet";
-    const prePrompts = ["You are a helpful assistant.", "you are a developper", "You will reply to a linkedIn comment in a way that is friendly, helpful and funny."];
+
+const makePreprompts = (customPrepromptArray, prompt) => {
+    const prePrompts =  customPrepromptArray;
     
-     // Abort any ongoing request before starting a new one
-     if (abortController) {
-        abortController.abort();
+    const defaultPrePrompt = [
+        `You are a helpful assistant.`,
+        `You will reply to a linkedIn comment or post in a way that is friendly, helpful and funny never otherwise.`,
+        `If the text looks encoded or corrupted, try to treat it as a emoji or a gif.`,
+        `If an image is send to you use it for more context.`,
+        `Don't make your responses too long.`,
+    ];
+
+    prePrompts.push(...defaultPrePrompt)
+
+    if (prompt?.moreContext) {
+        prePrompts.push(`
+            This is some more context for the comment or post if you need it "${prompt?.moreContext}".
+        `)
     }
 
-    // Create a new AbortController
-    abortController = new AbortController();
+    return prePrompts
+}
 
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        signal: abortController.signal, // Attach the signal
+const apiUrl = "http://localhost:11434";
+const singleResponse = async (prompt) => {
+    if (!prompt?.text) return null;
+
+    const url = `${apiUrl}/api/generate`;
+
+    const customPrePrompt = ["You are a developper."]
+    const prePrompts = makePreprompts(customPrePrompt, prompt)
+
+    let promptImage = {}
+
+    if (prompt?.imgB64) {
+        promptImage = {
+            image: prompt.imgB64.split(',')[1], // Remove data URI prefix
+        }
+    }
+
+    const {data} = await fetcher(url, {
         body: JSON.stringify({
-            prompt: generatePrompt(prompt, prePrompts),
+            prompt: generatePrompt(prompt?.text, prePrompts),
+            ...promptImage,
             model: "llama3.2-vision",
             stream: false,
             options: {
@@ -50,10 +69,47 @@ var singleResponse = async (prompt) => {
         })
     });
 
-    return await response?.json();
+    return data
 };
-  
-var multiResponse = async (prompt) => {
+
+
+let abortController; // Keep a reference to the current AbortController
+const fetcher = async (url, options) => {
+    // Abort any ongoing request before starting a new one
+    if (abortController) {
+        abortController.abort();
+    }
+
+    // Create a new AbortController
+    abortController = new AbortController();
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            signal: abortController.signal,
+            ...options,
+        });
+    
+        return {
+            error: null,
+            data: await response.json(),
+        }
+        
+    } catch (error) {
+        console.error("Request Error:", error);
+        return {
+            error: error,
+            data: null,
+        }
+    }
+
+};
+
+
+const multiResponse = async (prompt) => {
     const responses = [];
     
     for (let i = 0; i < 1; i++) {
@@ -61,33 +117,41 @@ var multiResponse = async (prompt) => {
     }
 
     return await Promise.allSettled(responses);
-  };
+};
   
 
-  
-  
+
+const openConfigPage = () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL("src/config.html") });
+}
+
 chrome.browserAction.onClicked.addListener(() => {
     // Open the configuration page in a new tab
     console.log("sdfsa saffasd sfadfasdf")
-    chrome.tabs.create({ url: chrome.runtime.getURL("src/popup.html") });
+    openConfigPage()
+});
+
+chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason === "install") {
+        openConfigPage()
+    } else if (details.reason === "update") {
+      console.log("Extension updated to a new version.");
+    }
 });
 
 
-  
+
+// somehow can't use async await on the request hmmmm ????....
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'ollama-request') {
         // Handle the specific message type
-        console.log("Message received:", message);
         multiResponse(message.payload.prompt)
             .then((data) => {
-                console.log("data", data)
                 sendResponse({ success: true, data });
             })
             .catch((error) => {
-                console.error("Error:", error);
                 sendResponse({ success: false, error: error.message });
             });
-        // Perform some asynchronous task
 
         return true; // Keeps the message channel open for async response
     }
@@ -96,7 +160,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Abort the ongoing request if any
         if (abortController) {
             abortController.abort();
-            console.log("Fetch request aborted.");
             sendResponse({ success: true, message: "Fetch aborted." });
         } else {
             sendResponse({ success: false, error: "No fetch request to abort." });

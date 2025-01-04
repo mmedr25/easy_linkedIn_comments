@@ -2,14 +2,11 @@
     "manifest_version": 2,
     "name": "Easy linkdedIn comments",
     "version": "1.0",
-  
     "description": "Use ai to write comments on linkedIn",
-  
     "icons": {
         "48": "assets/icons/logo.svg",
         "96": "assets/icons/logo.svg"
     },
-  
     "content_scripts": [
       {
         "matches": ["https://*.linkedin.com/*"],
@@ -25,9 +22,11 @@
         "48": "assets/icons/logo.svg",
         "128": "assets/icons/logo.svg"
         }
-  },
+    },
     "permissions": [
-        "http://localhost:11434/*"
+        "http://localhost:11434/*",
+        "https://media.licdn.com/dms/image/v2/*",
+        "storage"
     ],
     "background": {
         "scripts": ["src/background.js"]
