@@ -16,7 +16,7 @@ const easyResultTemplate = `
         <div class="header">
             <p>suggestions</p>
             <button title="close" class="close-btn">
-                <img alt="close button" width="24" height="24"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
         <div class="content"></div>
@@ -28,10 +28,27 @@ const loadingIcon = `
 `
 
 const easyLoadingTemplate = `
-    <div class="easy-loading-container" title="loading suggestions">
+    <div class="easy-state-message-container" title="loading suggestions">
         ${loadingIcon}
     </div>
 `
+const easyErrorTemplate = `
+    <div class="easy-state-message-container" title="error">
+        <p>Opps! an error occured</p>
+    </div>
+`
+
+// please use query selector for linkedin class, ...
+const LinkedInSelector = {
+    commentField: ".ql-editor p",
+    commentSectionText: ".update-components-text",
+    commentSectionImg: ".ivm-image-view-model img",
+    replySectionText: ".comments-comment-item__main-content",
+    commentBox: ".comments-comment-box--cr",
+    mainContainer: "main",
+}
+Object.freeze(LinkedInSelector)
+
 
 const generateHtml = (htmlString) => {
     const parser = new DOMParser();
@@ -97,11 +114,16 @@ function suggestionOnClick (commentField, suggestionText, popup, event) {
     hidePopup(popup)
 }
 
+
+
 const addSuggestions = (commentField, popup, result) => {
     removeLoading(popup)
+    
 
     if (!result.success) {
         console.error("coudn't fetch messages");
+        const errorNode = generateHtml(easyErrorTemplate)
+        popup.appendChild(errorNode)
         return
     }
 
@@ -130,7 +152,7 @@ const setupPopupCloseBtn = (popup) => {
     const closeButton = popup.querySelector(".close-btn")
 
     closeButton.addEventListener("click", easyPopupCloseBtnOnClick)
-    closeButton.querySelector("img").src = chrome.runtime.getURL('assets/icons/x.svg');
+    // closeButton.querySelector("img").src = chrome.runtime.getURL('assets/icons/x.svg');
 }
 
 const addLoading = (element) => {
@@ -139,7 +161,7 @@ const addLoading = (element) => {
 }
 
 const removeLoading = (element) => {
-    element.querySelector(".easy-loading-container")?.remove()
+    element.querySelector(".easy-state-message-container")?.remove()
 }
 
 const setupPopup = async (popupParentNode, prompt) => {
@@ -165,7 +187,7 @@ const setupPopup = async (popupParentNode, prompt) => {
     addLoading(popupNode)
 
     // add suggestions
-    const commentField = popupParentNode?.querySelector(".ql-editor p")
+    const commentField = popupParentNode?.querySelector(LinkedInSelector.commentField)
     const callback = addSuggestions.bind(this, commentField, popupNode)
 
     fetchMessages(prompt, callback)
@@ -191,18 +213,21 @@ async function easyButtonOnClickHandler(e) {
     const replySection = this.closest(".comments-comment-entity")
     const commentSection = this.closest(".fie-impression-container")
     
+    // if there is a popup and it is opened return
     const currentSection = replySection || commentSection // reply should be first
     const popup = currentSection?.querySelector(".easy-popup-container")
     const isPopupHidden = popup?.classList.contains("hide")
-
     if (popup && !isPopupHidden) return;
 
-    const commentSectionPrompText = commentSection?.querySelector(".update-components-text")?.innerText
-    const imageSrc = commentSection.querySelector(".ivm-image-view-model img")?.src
+    const commentSectionPrompText = commentSection
+        ?.querySelector(LinkedInSelector.commentSectionText)
+        ?.innerText
+    
+    const imageSrc = commentSection?.querySelector(LinkedInSelector.commentSectionImg)?.src
     
     // check if it is a reply first. Do not change the order of the if statements
     if (replySection) {
-        const prompText = replySection?.querySelector(".comments-comment-item__main-content")?.innerText
+        const prompText = replySection.querySelector(LinkedInSelector.replySectionText)?.innerText
 
         await setupPopup(replySection, {
             text: prompText,
@@ -215,7 +240,7 @@ async function easyButtonOnClickHandler(e) {
     
 
     if (commentSection) {
-        const popupParent = commentSection.querySelector(".comments-comment-box--cr")
+        const popupParent = commentSection.querySelector(LinkedInSelector.commentBox)
         
         await setupPopup(popupParent, {
             text: commentSectionPrompText,
@@ -229,7 +254,7 @@ async function easyButtonOnClickHandler(e) {
 
 
 const observerCallback = (_, __) => {
-    const commentSections = document.getElementsByClassName("comments-comment-box--cr")
+    const commentSections = document.querySelectorAll(LinkedInSelector.commentBox)
 
     for (const commentSection of commentSections) {
         if (!commentSection.getElementsByClassName("easy-comment-btn-container").length) {
@@ -251,6 +276,6 @@ const MutationObserverConfig = {
     subtree: true,
 };
 // Start observing the target node
-const observedNode = document.querySelector("main");
+const observedNode = document.querySelector(LinkedInSelector.mainContainer);
 const observer = new MutationObserver(observerCallback);
 observer.observe(observedNode, MutationObserverConfig);

@@ -18,15 +18,20 @@
     ],
     "browser_action": {
         "default_icon": {
-        "16": "assets/icons/logo.svg",
-        "48": "assets/icons/logo.svg",
-        "128": "assets/icons/logo.svg"
+            "16": "assets/icons/logo.svg",
+            "48": "assets/icons/logo.svg",
+            "128": "assets/icons/logo.svg"
         }
+    },
+    "options_ui": {
+        "page": "src/config.html",
+        "open_in_tab": true
     },
     "permissions": [
         "http://localhost:11434/*",
         "https://media.licdn.com/dms/image/v2/*",
-        "storage"
+        "storage",
+        "tabs"
     ],
     "background": {
         "scripts": ["src/background.js"]

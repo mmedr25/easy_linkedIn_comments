@@ -3,32 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configuration Page</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    .config-item {
-      margin-bottom: 15px;
-    }
-  </style>
+  <title>LinkedIn easy comment configuration page</title>
+  <script defer src="config.js"></script>
+  <link rel="stylesheet" href="../assets/css/global.css">
 </head>
 <body>
-  <h1>Extension Configuration</h1>
-  
-  <div class="config-item">
-    <label for="setting1">Setting 1:</label>
-    <input type="text" id="setting1" placeholder="Enter value for setting 1">
-  </div>
-
-  <div class="config-item">
-    <label for="setting2">Setting 2:</label>
-    <input type="text" id="setting2" placeholder="Enter value for setting 2">
-  </div>
-
-  <button id="saveBtn">Save Settings</button>
-
-  <script src="config.js"></script>
+  <main>
+    <div class="config-header">
+      <h1>Easy linkedIn comment configuration</h1>
+      <button class="button delete" id="delete-all">delete all</button>
+    </div>
+    <section class="section">
+        <h2>Manage api</h2>
+      <form class="submit-form form">
+        <div class="input-container">
+          <label for="api-url">Url</label>
+          <input class="input" type="url" name="url" id="url" placeholder="https://example.com" required>
+        </div>
+        <div>
+          <button class="button">save</button>
+        </div>
+      </form>
+    </section>
+    <section class="section">
+      <h2>Manage pre-prompts</h2>
+      <form class="submit-form form">
+        <div class="input-container">
+          <label for="pre-prompt">Pre prompt</label>
+          <textarea class="input" name="prePrompt" id="pre-prompt" placeholder="this is how you can help me" required rows="5"></textarea>
+        </div>
+        <div>
+          <button class="button">add</button>
+        </div>
+      </form>
+      <div id="preprompt-list-container">
+        <h3>List of pre-prompts</h3>
+        <ul id="prePromptList"></ul>
+      </div>
+    </section>
+  </main>
 </body>
 </html>
