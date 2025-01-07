@@ -1,5 +1,6 @@
 // abort requests
 let abortController = new AbortController();
+let config = {}
 
 // preprompts
 const defaultPrePrompt = [
@@ -9,6 +10,11 @@ const defaultPrePrompt = [
     `If an image is send to you use it for more context.`,
     `Don't make your responses too long.`,
 ];
+
+
+const getConfig = () => {
+    return config 
+}
 
 
 const generatePrePromptString = (prePrompts) => {
@@ -23,13 +29,14 @@ const generatePrePromptString = (prePrompts) => {
 
 
 const makePreprompts = (customPrepromptArray, prompt) => {
-    const prePrompts =  customPrepromptArray;
+    const prePrompts =  customPrepromptArray || [];
 
     prePrompts.push(...defaultPrePrompt)
 
     if (prompt?.moreContext) {
         prePrompts.push(`
-            This is some more context for the comment or post if you need it "${prompt?.moreContext}".
+            This is some more context for the comment or 
+            post if you need it "${prompt?.moreContext}".
         `)
     }
 
@@ -41,13 +48,11 @@ const singleResponse = async (prompt) => {
     const config = getConfig()
     
     const apiUrl = config?.url || "http://localhost:11434";
+    
     if (!prompt?.text) return null;
 
     const url = `${apiUrl}/api/generate`;
-    const customPrePrompt = config?.prePrompts || []
-    console.log("🚀 ~ singleResponse ~ customPrePrompt:", customPrePrompt)
-    // const customPrePrompt = ["You are a developper."]
-    const prePromptList = makePreprompts(customPrePrompt, prompt)
+    const prePromptList = makePreprompts(config?.prePrompts, prompt)
     let promptImage = {}
 
     if (prompt?.imgB64) {
@@ -56,7 +61,7 @@ const singleResponse = async (prompt) => {
         }
     }
 
-    const {data, error} = await fetcher(url, {
+    return await fetcher(url, {
         body: JSON.stringify({
             prompt: prompt.text,
             system: generatePrePromptString(prePromptList),
@@ -70,16 +75,13 @@ const singleResponse = async (prompt) => {
             }
         })
     });
-
-    return {data, error}
 };
 
 
 const fetcher = async (url, options) => {
-    
+    // Create a fresh controller if old one was aborted
     if (abortController.signal.aborted) {
-        console.log("Signal already aborted. Creating a new controller.");
-        abortController = new AbortController(); // Create a fresh controller
+        abortController = new AbortController(); 
     }
 
     try {
@@ -115,70 +117,41 @@ const multiResponse = async (prompt) => {
       responses.push(singleResponse(prompt));
     }
 
-
     return await Promise.all(responses);
 };
 
 
-
 const openConfigPage = () => {
-    // chrome.tabs.create({ url: chrome.runtime.getURL("src/config.html") });
     browser.runtime.openOptionsPage();
-
 }
 
+
+// Open the configuration page in a new tab
 chrome.browserAction.onClicked.addListener(() => {
-    // Open the configuration page in a new tab
     openConfigPage()
 });
 
-chrome.runtime.onInstalled.addListener(async (details) => {
+
+chrome.runtime.onInstalled.addListener(async () => {
     openConfigPage()
     config = (await browser.storage.local.get("config"))?.config
 });
 
-let config
-
-const getConfig = () => {
-    return config 
-}
 
 browser.storage.onChanged.addListener((changes, areaName) => {
-    console.log(`Changes in storage area: ${areaName}`);
-  
     for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
-        let configValue = {...oldValue, ...newValue }
-        
-        if (!newValue) {
-            configValue = {}
-        }
-        config = configValue
+        config = newValue ? {...oldValue, ...newValue} : {}
     }
-
 });
+
 
 // somehow can't use async await on the request hmmmm ????....
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'ollama-request') {
         // Handle the specific message type
         multiResponse(message.payload.prompt)
-            .then((response) => {
-
-                // console.log("🚀 ~ .then ~ data:", response)
-                // const error = response?.error || response?.data?.error
-                // if (error) {
-                //     sendResponse({ success: false, error: error })
-                //     return
-                // }
-
-                // console.log("🚀 ~ .then ~ response.data:", response.data)
-                sendResponse({ success: true, data: response })
-            })
-            .catch((error) => {
-                sendResponse({ success: false, data: error.message })
-
- 
-            });
+            .then((response) => sendResponse({ success: true, data: response }))
+            .catch((error) => sendResponse({ success: false, data: error.message }));
 
         return true; // Keeps the message channel open for async response
     }

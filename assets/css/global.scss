@@ -7,19 +7,23 @@
     --color-text-muted: #757575;
 }
 
+
 .loading-icon {
     color: var(--color-text-muted);
 }
 
+
 .comments-comment-entity {
     position: relative;
 }
+
 
 //  linkedIn class new post button(the blue pill)
 .feed-new-update-pill {
     position: relative;
     z-index: 50;
 }
+
 
 .easy-comment-popup {
     position: relative;
@@ -92,6 +96,7 @@
     }
 }
 
+
 .comments-comment-box--cr {
     display: flex;
     flex-direction: column;
@@ -123,10 +128,12 @@
     }
 }
 
+
 .loading-icon {
     stroke: var(--color-text-muted);
     animation: spin 2s linear infinite;
 }
+
 
 @keyframes spin {
     from {
@@ -135,165 +142,4 @@
     to {
       transform: rotate(360deg);
     }
-}
-
-
-
-
-
-
-
-//////////////////////////////////////////////
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-ul {
-    list-style: none;
-}
-
-
-
-
-body {
-    background-color: #202020;
-    color: #e7e7e7;
-}
-
-h1 {
-    color: white;
-}
-main {
-    padding: 2em;
-}
-
-.section {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-    margin-top: 4em;
-}
-
-.button {
-    background-color: #0a66c2;
-    font-weight: bold;
-    color: white;
-    padding: 0.5em 1em;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    &::first-letter{
-        text-transform: uppercase;
-    }
-    &.muted {
-        background-color: #838383;
-    }
-    &.delete {
-        background-color: #820101;
-    }
-}
-
-.input-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3em;
-    label {
-        color: #838383;
-        display: inline-block;
-        &::first-letter {
-            text-transform: uppercase;
-        }
-    }
-    .hint {
-        color: #83838390;
-        font-size: 0.8em;
-    }
-}
-
-.input {
-    background-color: #202020;
-    border: 1px solid #838383;
-    color: #838383;
-    padding: 0.5em;
-    outline: none;
-    border-radius: 6px;
-    &:focus {
-        border: 1px solid #e7e7e7;
-        color: #e7e7e7;
-    }
-}
-
-.form {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-    .form-group {
-        display: flex;
-        width: 100%;
-        gap: 1em;
-        & > * {
-            flex: 1;
-        }
-    }
-}
-
-textarea {
-    overflow: auto;
-    resize: vertical;
-}
-
-#preprompt-list-container {
-    margin-top: 2em;
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-}
-
-
-#prePromptList {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-    #empty-preprompt-list {
-        text-align: center;
-        padding: 6em 0em;
-        color: #838383;
-
-    }
-    .prePrompt-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 2em;
-        border: 1px solid #838383;
-        color: #838383;
-        border-radius: 6px;
-        padding: 1em;
-        border-radius: 6px;
-        & > div {
-            display: flex;
-            gap: 0.5em;
-        }
-        textarea.input {
-            border: none;
-            flex: 1;
-        }
-    }
-}
-.config-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1em;
-}
-
-#notification {
-    padding: 1em;
-    border: 1px solid #0a66c2;
-    background-color: #202020;
-    border-radius: 6px;
-    position: fixed;
-    bottom: 1em;
-    right: 1em;
 }

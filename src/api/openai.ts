@@ -1,6 +1,6 @@
 import type { PrePrompts, Prompt } from "../types/api";
 
-console.log("Hello via Bun!");
+console.log("Comming soon");
 
 
 

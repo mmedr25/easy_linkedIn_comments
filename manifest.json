@@ -36,5 +36,4 @@
     "background": {
         "scripts": ["src/background.js"]
     }
-  }
-  
+}

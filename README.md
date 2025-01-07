@@ -57,5 +57,4 @@ make dev
 
 3. configure the extension
 
-
 Voila!!!
