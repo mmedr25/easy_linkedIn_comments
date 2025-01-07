@@ -86,7 +86,7 @@ const fetchMessages = (prompt, callback) => {
             if (response.success) {
                 callback({data: response?.data, success: true})
             } else {
-                callback({success: false})
+                callback({error: response?.error, success: false})
             }
         }
     );
@@ -118,12 +118,16 @@ function suggestionOnClick (commentField, suggestionText, popup, event) {
 
 const addSuggestions = (commentField, popup, result) => {
     removeLoading(popup)
+    const popupContent = popup.querySelector(".content")
     
-
-    if (!result.success) {
-        console.error("coudn't fetch messages");
+    if (!result?.success) {
+        popupContent.innerHTML = ""
+        
+        console.error("coudn't fetch messages", result.error);
         const errorNode = generateHtml(easyErrorTemplate)
-        popup.appendChild(errorNode)
+        
+        result?.error && (errorNode.querySelector("p").innerText = result.error)
+        popupContent.appendChild(errorNode)
         return
     }
 
@@ -141,9 +145,7 @@ const addSuggestions = (commentField, popup, result) => {
         const eventHandler = suggestionOnClick.bind(this, commentField, suggestionText, popup)
         suggestionNode.addEventListener("click", eventHandler)
 
-        popup
-            ?.querySelector(".content")
-            .appendChild(suggestionNode)
+        popupContent.appendChild(suggestionNode)
 
     });
 }
@@ -155,9 +157,9 @@ const setupPopupCloseBtn = (popup) => {
     // closeButton.querySelector("img").src = chrome.runtime.getURL('assets/icons/x.svg');
 }
 
-const addLoading = (element) => {
+const addLoading = (popup) => {
     const loadingNode = generateHtml(easyLoadingTemplate)
-    element.appendChild(loadingNode)
+    popup.querySelector(".content").appendChild(loadingNode)
 }
 
 const removeLoading = (element) => {
@@ -167,7 +169,7 @@ const removeLoading = (element) => {
 const setupPopup = async (popupParentNode, prompt) => {
     let popupNode = popupParentNode?.querySelector(".easy-comment-popup")
     let hasSuggestion = !!popupNode?.querySelector(".content .easy-suggestion")
-    
+
     if (hasSuggestion) {
         showPopup(popupNode)
         return
@@ -212,7 +214,7 @@ async function imageToBase64(url) {
 async function easyButtonOnClickHandler(e) {
     const replySection = this.closest(".comments-comment-entity")
     const commentSection = this.closest(".fie-impression-container")
-    
+
     // if there is a popup and it is opened return
     const currentSection = replySection || commentSection // reply should be first
     const popup = currentSection?.querySelector(".easy-popup-container")
@@ -222,9 +224,9 @@ async function easyButtonOnClickHandler(e) {
     const commentSectionPrompText = commentSection
         ?.querySelector(LinkedInSelector.commentSectionText)
         ?.innerText
-    
+
     const imageSrc = commentSection?.querySelector(LinkedInSelector.commentSectionImg)?.src
-    
+
     // check if it is a reply first. Do not change the order of the if statements
     if (replySection) {
         const prompText = replySection.querySelector(LinkedInSelector.replySectionText)?.innerText
@@ -237,7 +239,7 @@ async function easyButtonOnClickHandler(e) {
         
         return
     }
-    
+
 
     if (commentSection) {
         const popupParent = commentSection.querySelector(LinkedInSelector.commentBox)

@@ -10,28 +10,27 @@ This project it a cool and lightweight browser extension for linkedIn that helps
 ## Installation
 1. Clone the repository:
 ```bash
-    git clone https://github.com/mmedr25/easy_linkedIn_comments.git
+git clone https://github.com/mmedr25/easy_linkedIn_comments.git
 ```
 
 2. Install dependencies:
 ```bash
-    npm install # delete "bun.lockb" file
-    #  or 
-    bun install 
+npm install # delete "bun.lockb" file
+#  or
+bun install
 
 #  then
-    npm install --global web-ext
-    brew install sass/sass/sass
+npm install --global web-ext
+brew install sass/sass/sass
  ```
-3. You make also need to install "make" to run makefile
+3. You may also need to install "make" to run makefile
 
 linux installation
 ```bash
-    make --version # check if installed
-    # else
-    sudo apt update
-    sudo apt install make
-
+make --version # check if installed
+# else
+sudo apt update
+sudo apt install make
 ```
 [window installation](https://thrivemyway.com/how-to-install-and-use-make-in-windows/)
 
@@ -41,13 +40,13 @@ linux installation
 install the model "llama3.2-vision"
 
 ```bash
-    launchctl setenv OLLAMA_ORIGINS "*" #cors
+launchctl setenv OLLAMA_ORIGINS "*" #cors
 ```
 
 
 ## Development
 ```bash
-    make dev
+make dev
 ```
 
 

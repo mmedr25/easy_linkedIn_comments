@@ -37,13 +37,14 @@ const makePreprompts = (customPrepromptArray, prompt) => {
 }
 
 
-// const apiUrl = "http://localhost:11434";
 const singleResponse = async (prompt) => {
-    const apiUrl = getConfig()?.url || "";
+    const config = getConfig()
+    
+    const apiUrl = config?.url || "http://localhost:11434";
     if (!prompt?.text) return null;
 
     const url = `${apiUrl}/api/generate`;
-    const customPrePrompt = getConfig()?.prePrompts
+    const customPrePrompt = config?.prePrompts || []
     console.log("🚀 ~ singleResponse ~ customPrePrompt:", customPrePrompt)
     // const customPrePrompt = ["You are a developper."]
     const prePromptList = makePreprompts(customPrePrompt, prompt)
@@ -55,12 +56,12 @@ const singleResponse = async (prompt) => {
         }
     }
 
-    const {data} = await fetcher(url, {
+    const {data, error} = await fetcher(url, {
         body: JSON.stringify({
             prompt: prompt.text,
             system: generatePrePromptString(prePromptList),
             ...promptImage,
-            model: "llama3.2-vision",
+            model: config?.model || "llama3.2-vision",
             stream: false,
             options: {
                 max_tokens: 100,
@@ -70,7 +71,7 @@ const singleResponse = async (prompt) => {
         })
     });
 
-    return data
+    return {data, error}
 };
 
 
@@ -108,12 +109,13 @@ const fetcher = async (url, options) => {
 
 const multiResponse = async (prompt) => {
     const responses = [];
-    
-    for (let i = 0; i < 10; i++) {
+    const count = getConfig()?.count || 3
+
+    for (let i = 0; i < count; i++) {
       responses.push(singleResponse(prompt));
     }
 
-    return await Promise.allSettled(responses);
+    return await Promise.any(responses);
 };
 
 
@@ -129,19 +131,17 @@ chrome.browserAction.onClicked.addListener(() => {
     openConfigPage()
 });
 
-chrome.runtime.onInstalled.addListener((details) => {
-    // if (details.reason === "install") {
-        openConfigPage()
-    // } else if (details.reason === "update") {
-    //   console.log("Extension updated to a new version.");
-    // }
+chrome.runtime.onInstalled.addListener(async (details) => {
+    openConfigPage()
+    config = (await browser.storage.local.get("config"))?.config
 });
 
 let config
 
 const getConfig = () => {
-    return config
+    return config 
 }
+
 browser.storage.onChanged.addListener((changes, areaName) => {
     console.log(`Changes in storage area: ${areaName}`);
   
@@ -161,8 +161,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'ollama-request') {
         // Handle the specific message type
         multiResponse(message.payload.prompt)
-            .then((data) => sendResponse({ success: true, data }))
-            .catch((error) => sendResponse({ success: false, error: error.message }));
+            .then((response) => {
+                console.log("🚀 ~ .then ~ data:", response)
+                const error = response?.error || response?.data?.error
+                if (error) {
+                    sendResponse({ success: false, error: error })
+                    return
+                }
+
+                sendResponse({ success: true, data: response.data })
+            })
+            .catch((error) => {
+                console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ error:", error)
+                sendResponse({ success: false, error: error.message })
+            });
 
         return true; // Keeps the message channel open for async response
     }
