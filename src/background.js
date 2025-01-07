@@ -115,7 +115,8 @@ const multiResponse = async (prompt) => {
       responses.push(singleResponse(prompt));
     }
 
-    return await Promise.any(responses);
+
+    return await Promise.all(responses);
 };
 
 
@@ -162,18 +163,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Handle the specific message type
         multiResponse(message.payload.prompt)
             .then((response) => {
-                console.log("🚀 ~ .then ~ data:", response)
-                const error = response?.error || response?.data?.error
-                if (error) {
-                    sendResponse({ success: false, error: error })
-                    return
-                }
 
-                sendResponse({ success: true, data: response.data })
+                // console.log("🚀 ~ .then ~ data:", response)
+                // const error = response?.error || response?.data?.error
+                // if (error) {
+                //     sendResponse({ success: false, error: error })
+                //     return
+                // }
+
+                // console.log("🚀 ~ .then ~ response.data:", response.data)
+                sendResponse({ success: true, data: response })
             })
             .catch((error) => {
-                console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ error:", error)
-                sendResponse({ success: false, error: error.message })
+                sendResponse({ success: false, data: error.message })
+
+ 
             });
 
         return true; // Keeps the message channel open for async response

@@ -117,22 +117,28 @@ function suggestionOnClick (commentField, suggestionText, popup, event) {
 
 
 const addSuggestions = (commentField, popup, result) => {
-    removeLoading(popup)
-    const popupContent = popup.querySelector(".content")
+
+    removeLoading(popup);
+    const popupContent = popup.querySelector(".content");
     
-    if (!result?.success) {
+    const error = result?.data[0]?.data?.error || result?.data[0]?.error?.message
+    // const hasError = 
+
+    if (!result?.success || error) {
         popupContent.innerHTML = ""
         
-        console.error("coudn't fetch messages", result.error);
+        // console.error("coudn't fetch messages", result.error);
         const errorNode = generateHtml(easyErrorTemplate)
         
-        result?.error && (errorNode.querySelector("p").innerText = result.error)
+        error && (errorNode.querySelector("p").innerText = error)
+
         popupContent.appendChild(errorNode)
         return
     }
 
-    result?.data?.forEach(data => {
-        let suggestionText = data?.value?.response;
+    console.log("🚀 ~ addSuggestions ~ result?.data:", result?.data)
+    result?.data?.forEach(item => {
+        let suggestionText = item?.data?.response;
 
         if (!suggestionText) return;
 
@@ -163,12 +169,17 @@ const addLoading = (popup) => {
 }
 
 const removeLoading = (element) => {
-    element.querySelector(".easy-state-message-container")?.remove()
+
+    element?.querySelectorAll(".easy-state-message-container")?.forEach(element => element?.remove()) 
+
 }
 
 const setupPopup = async (popupParentNode, prompt) => {
     let popupNode = popupParentNode?.querySelector(".easy-comment-popup")
     let hasSuggestion = !!popupNode?.querySelector(".content .easy-suggestion")
+
+    removeLoading(popupNode)
+    
 
     if (hasSuggestion) {
         showPopup(popupNode)
