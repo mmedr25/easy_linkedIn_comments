@@ -6,6 +6,7 @@ dev:
 ts:
 	bun build src/**/*.ts --outdir dist --watch
 
+
 # plugin
 watch:
 	web-ext run
@@ -13,4 +14,4 @@ watch:
 
 # style
 css:
-	sass --watch assets/css/global.scss:assets/css/global.css --style=compressed
+	sass --watch assets/css:assets/css --style=compressed

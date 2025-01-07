@@ -43,59 +43,14 @@ const LinkedInSelector = {
     commentField: ".ql-editor p",
     commentSectionText: ".update-components-text",
     commentSectionImg: ".ivm-image-view-model img",
-    replySectionText: ".comments-comment-item__main-content",
     commentBox: ".comments-comment-box--cr",
-    mainContainer: "main",
+    replySectionText: ".comments-comment-item__main-content",
+    replySection: ".comments-comment-entity",
+    article: ".fie-impression-container",
+    articleModal: "#artdeco-modal-outlet",
 }
 Object.freeze(LinkedInSelector)
 
-
-const generateHtml = (htmlString) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, "text/html");
-    return doc.body.firstChild;
-};
-
-const setTextContent = (element, newText) => {
-    // remove the existing node
-    for (const node of element.childNodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            node.remove();
-        }
-    }
-    
-    // No existing text node, create a new one
-    element.append(document.createTextNode(newText));
-}
-
-const hidePopup = (element) => {
-    element.classList.add("hide")
-}
-const showPopup = (element) => {
-    element.classList.remove("hide")
-}
-
-const abortFetchMessages = () => {
-    chrome.runtime.sendMessage({ type: 'abort-fetch' });
-}
-
-const fetchMessages = (prompt, callback) => {
-    chrome.runtime.sendMessage(
-        { type: 'ollama-request', payload: {prompt} },
-        (response) => {
-            if (response.success) {
-                callback({data: response?.data, success: true})
-            } else {
-                callback({error: response?.error, success: false})
-            }
-        }
-    );
-
-}
-
-window.addEventListener("beforeunload", () => {
-    abortFetchMessages()
-});
 
 function easyPopupCloseBtnOnClick (e) {
     const popup = this.closest(".easy-comment-popup")
@@ -103,11 +58,6 @@ function easyPopupCloseBtnOnClick (e) {
     abortFetchMessages()
 }
 
-const parseSuggestion = (suggestion) => {
-    return suggestion.replace(/^\"(.*)\"$/, (_, middleContent) => {
-        return middleContent;
-    });
-};
 
 function suggestionOnClick (commentField, suggestionText, popup, event) {
     setTextContent(commentField, suggestionText)
@@ -115,28 +65,18 @@ function suggestionOnClick (commentField, suggestionText, popup, event) {
 }
 
 
-
 const addSuggestions = (commentField, popup, result) => {
-
-    removeLoading(popup);
     const popupContent = popup.querySelector(".content");
+    const firstResult = result?.data?.[0]
+    const error = firstResult?.data?.error || firstResult?.error?.message
     
-    const error = result?.data[0]?.data?.error || result?.data[0]?.error?.message
-    // const hasError = 
+    removeStatusMessages(popup);
 
     if (!result?.success || error) {
-        popupContent.innerHTML = ""
-        
-        // console.error("coudn't fetch messages", result.error);
-        const errorNode = generateHtml(easyErrorTemplate)
-        
-        error && (errorNode.querySelector("p").innerText = error)
-
-        popupContent.appendChild(errorNode)
+        addErrorStatus(popupContent, error)
         return
     }
 
-    console.log("🚀 ~ addSuggestions ~ result?.data:", result?.data)
     result?.data?.forEach(item => {
         let suggestionText = item?.data?.response;
 
@@ -156,30 +96,42 @@ const addSuggestions = (commentField, popup, result) => {
     });
 }
 
-const setupPopupCloseBtn = (popup) => {
-    const closeButton = popup.querySelector(".close-btn")
 
-    closeButton.addEventListener("click", easyPopupCloseBtnOnClick)
-    // closeButton.querySelector("img").src = chrome.runtime.getURL('assets/icons/x.svg');
+const setupPopupCloseBtn = (popup) => {
+    popup
+        .querySelector(".close-btn")
+        .addEventListener("click", easyPopupCloseBtnOnClick)
 }
 
-const addLoading = (popup) => {
+
+const addLoadingStatus = (popup) => {
     const loadingNode = generateHtml(easyLoadingTemplate)
     popup.querySelector(".content").appendChild(loadingNode)
 }
 
-const removeLoading = (element) => {
+const addErrorStatus = (popupContent, error) => {
+    popupContent.innerHTML = ""
+        
+    const errorNode = generateHtml(easyErrorTemplate)
+    
+    error && (errorNode.querySelector("p").innerText = error)
 
-    element?.querySelectorAll(".easy-state-message-container")?.forEach(element => element?.remove()) 
-
+    popupContent.appendChild(errorNode)
 }
+
+
+const removeStatusMessages = (popup) => {
+    popup
+        ?.querySelectorAll(".easy-state-message-container")
+        ?.forEach(element => element?.remove()) 
+}
+
 
 const setupPopup = async (popupParentNode, prompt) => {
     let popupNode = popupParentNode?.querySelector(".easy-comment-popup")
     let hasSuggestion = !!popupNode?.querySelector(".content .easy-suggestion")
 
-    removeLoading(popupNode)
-    
+    removeStatusMessages(popupNode)
 
     if (hasSuggestion) {
         showPopup(popupNode)
@@ -195,9 +147,8 @@ const setupPopup = async (popupParentNode, prompt) => {
     } else {
         showPopup(popupNode)
     }
-
     // loading indicator because no suggestions and we are about to get some
-    addLoading(popupNode)
+    addLoadingStatus(popupNode)
 
     // add suggestions
     const commentField = popupParentNode?.querySelector(LinkedInSelector.commentField)
@@ -208,9 +159,8 @@ const setupPopup = async (popupParentNode, prompt) => {
 
 
 async function imageToBase64(url) {
-    if (!url) {
-        return null;
-    }
+    if (!url) return null; 
+
     const response = await fetch(url);
     const blob = await response.blob();
 
@@ -223,13 +173,14 @@ async function imageToBase64(url) {
 }
 
 async function easyButtonOnClickHandler(e) {
-    const replySection = this.closest(".comments-comment-entity")
-    const commentSection = this.closest(".fie-impression-container")
+    const replySection = this.closest(LinkedInSelector.replySection)
+    const commentSection = this.closest(LinkedInSelector.article) || this.closest(LinkedInSelector.articleModal)
 
     // if there is a popup and it is opened return
     const currentSection = replySection || commentSection // reply should be first
     const popup = currentSection?.querySelector(".easy-popup-container")
     const isPopupHidden = popup?.classList.contains("hide")
+    
     if (popup && !isPopupHidden) return;
 
     const commentSectionPrompText = commentSection
@@ -247,22 +198,15 @@ async function easyButtonOnClickHandler(e) {
             moreContext: commentSectionPrompText,
             imgB64: await imageToBase64(imageSrc),
         })
-        
         return
     }
 
+    const popupParent = this.closest(LinkedInSelector.commentBox)
 
-    if (commentSection) {
-        const popupParent = commentSection.querySelector(LinkedInSelector.commentBox)
-        
-        await setupPopup(popupParent, {
-            text: commentSectionPrompText,
-            imgB64: await imageToBase64(imageSrc),
-        })
-        
-        return
-    }
-
+    await setupPopup(popupParent, {
+        text: commentSectionPrompText,
+        imgB64: await imageToBase64(imageSrc),
+    })
 }
 
 
@@ -283,12 +227,74 @@ const observerCallback = (_, __) => {
 };
 
 
+const generateHtml = (htmlString) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, "text/html");
+    return doc.body.firstChild;
+};
+
+
+const setTextContent = (element, newText) => {
+    // remove the existing node
+    for (const node of element.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            node.remove();
+        }
+    }
+    // No existing text node, create a new one
+    element.append(document.createTextNode(newText));
+}
+
+
+const hidePopup = (element) => {
+    element.classList.add("hide")
+}
+const showPopup = (element) => {
+    element.classList.remove("hide")
+}
+
+
+const abortFetchMessages = () => {
+    chrome.runtime.sendMessage({ type: 'abort-fetch' });
+}
+
+
+const fetchMessages = (prompt, callback) => {
+    chrome.runtime.sendMessage(
+        { 
+            type: 'ollama-request', 
+            payload: {prompt} 
+        },
+        (response) => {
+            if (response.success) {
+                callback({data: response?.data, success: true})
+            } else {
+                callback({error: response?.error, success: false})
+            }
+        }
+    );
+}
+
+
+const parseSuggestion = (suggestion) => {
+    return suggestion.replace(/^\"(.*)\"$/, (_, middleContent) => {
+        return middleContent;
+    });
+};
+
+
 // observer configuration
 const MutationObserverConfig = {
     childList: true,
     subtree: true,
 };
+
 // Start observing the target node
-const observedNode = document.querySelector(LinkedInSelector.mainContainer);
+const observedNode = document.querySelector("body");
 const observer = new MutationObserver(observerCallback);
 observer.observe(observedNode, MutationObserverConfig);
+
+
+window.addEventListener("beforeunload", () => {
+    abortFetchMessages()
+});
