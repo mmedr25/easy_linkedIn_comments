@@ -1,31 +1,29 @@
+// abort requests
+let abortController = new AbortController();
+
+// preprompts
+const defaultPrePrompt = [
+    `You are a helpful assistant.`,
+    `You will reply to a linkedIn comment or post in a way that is friendly, helpful and funny never otherwise.`,
+    `If the text looks encoded or corrupted, try to treat it as a emoji or a gif.`,
+    `If an image is send to you use it for more context.`,
+    `Don't make your responses too long.`,
+];
+
+
 const generatePrePromptString = (prePrompts) => {
-    if (!prePrompts.length) {
-      return "";
-    }
+    if (!prePrompts.length) return "";
+
     const newPrePrompts = prePrompts.map((item) => {
       return item.trim().replace(/\.$/, "");
     });
+
     return newPrePrompts.join(".");
 };
-  
-const generatePrompt = (prompt, prePrompts) => {
-    const prePromptsString = generatePrePromptString(prePrompts);
-    return `System:${prePromptsString} User:${prompt}`;
-};
-
-
 
 
 const makePreprompts = (customPrepromptArray, prompt) => {
     const prePrompts =  customPrepromptArray;
-    
-    const defaultPrePrompt = [
-        `You are a helpful assistant.`,
-        `You will reply to a linkedIn comment or post in a way that is friendly, helpful and funny never otherwise.`,
-        `If the text looks encoded or corrupted, try to treat it as a emoji or a gif.`,
-        `If an image is send to you use it for more context.`,
-        `Don't make your responses too long.`,
-    ];
 
     prePrompts.push(...defaultPrePrompt)
 
@@ -38,15 +36,18 @@ const makePreprompts = (customPrepromptArray, prompt) => {
     return prePrompts
 }
 
-const apiUrl = "http://localhost:11434";
+
 const singleResponse = async (prompt) => {
+    const config = getConfig()
+    
+    const apiUrl = config?.url || "http://localhost:11434";
     if (!prompt?.text) return null;
 
     const url = `${apiUrl}/api/generate`;
-
-    const customPrePrompt = ["You are a developper."]
-    const prePrompts = makePreprompts(customPrePrompt, prompt)
-
+    const customPrePrompt = config?.prePrompts || []
+    console.log("🚀 ~ singleResponse ~ customPrePrompt:", customPrePrompt)
+    // const customPrePrompt = ["You are a developper."]
+    const prePromptList = makePreprompts(customPrePrompt, prompt)
     let promptImage = {}
 
     if (prompt?.imgB64) {
@@ -55,11 +56,12 @@ const singleResponse = async (prompt) => {
         }
     }
 
-    const {data} = await fetcher(url, {
+    const {data, error} = await fetcher(url, {
         body: JSON.stringify({
-            prompt: generatePrompt(prompt?.text, prePrompts),
+            prompt: prompt.text,
+            system: generatePrePromptString(prePromptList),
             ...promptImage,
-            model: "llama3.2-vision",
+            model: config?.model || "llama3.2-vision",
             stream: false,
             options: {
                 max_tokens: 100,
@@ -69,19 +71,16 @@ const singleResponse = async (prompt) => {
         })
     });
 
-    return data
+    return {data, error}
 };
 
 
-let abortController; // Keep a reference to the current AbortController
 const fetcher = async (url, options) => {
-    // Abort any ongoing request before starting a new one
-    if (abortController) {
-        abortController.abort();
+    
+    if (abortController.signal.aborted) {
+        console.log("Signal already aborted. Creating a new controller.");
+        abortController = new AbortController(); // Create a fresh controller
     }
-
-    // Create a new AbortController
-    abortController = new AbortController();
 
     try {
         const response = await fetch(url, {
@@ -92,12 +91,12 @@ const fetcher = async (url, options) => {
             signal: abortController.signal,
             ...options,
         });
-    
+
         return {
             error: null,
             data: await response.json(),
         }
-        
+
     } catch (error) {
         console.error("Request Error:", error);
         return {
@@ -105,41 +104,58 @@ const fetcher = async (url, options) => {
             data: null,
         }
     }
-
 };
 
 
 const multiResponse = async (prompt) => {
     const responses = [];
-    
-    for (let i = 0; i < 1; i++) {
+    const count = getConfig()?.count || 3
+
+    for (let i = 0; i < count; i++) {
       responses.push(singleResponse(prompt));
     }
 
+
     return await Promise.all(responses);
 };
-  
+
 
 
 const openConfigPage = () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL("src/config.html") });
+    // chrome.tabs.create({ url: chrome.runtime.getURL("src/config.html") });
+    browser.runtime.openOptionsPage();
+
 }
 
 chrome.browserAction.onClicked.addListener(() => {
     // Open the configuration page in a new tab
-    console.log("sdfsa saffasd sfadfasdf")
     openConfigPage()
 });
 
-chrome.runtime.onInstalled.addListener((details) => {
-    if (details.reason === "install") {
-        openConfigPage()
-    } else if (details.reason === "update") {
-      console.log("Extension updated to a new version.");
-    }
+chrome.runtime.onInstalled.addListener(async (details) => {
+    openConfigPage()
+    config = (await browser.storage.local.get("config"))?.config
 });
 
+let config
 
+const getConfig = () => {
+    return config 
+}
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+    console.log(`Changes in storage area: ${areaName}`);
+  
+    for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
+        let configValue = {...oldValue, ...newValue }
+        
+        if (!newValue) {
+            configValue = {}
+        }
+        config = configValue
+    }
+
+});
 
 // somehow can't use async await on the request hmmmm ????....
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -147,6 +163,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Handle the specific message type
         multiResponse(message.payload.prompt)
             .then((response) => {
+
                 // console.log("🚀 ~ .then ~ data:", response)
                 // const error = response?.error || response?.data?.error
                 // if (error) {
@@ -159,6 +176,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             })
             .catch((error) => {
                 sendResponse({ success: false, data: error.message })
+
+ 
             });
 
         return true; // Keeps the message channel open for async response
@@ -172,7 +191,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else {
             sendResponse({ success: false, error: "No fetch request to abort." });
         }
-        return true; // Keeps the message channel open for async response
-        
+
+        return true;
     }
 });
