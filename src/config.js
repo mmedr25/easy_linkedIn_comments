@@ -1,9 +1,16 @@
-let oldConfig
+let currentConfig
 function formSubmitHandler(e) {
     e.preventDefault()
-    const formData = new FormData(e.target)
+    const form = e.target
+    const formData = new FormData(form)
     const data = Object.fromEntries(formData.entries());
     saveData(data)
+
+    // clear textarea
+    const textarea = form.querySelector("textarea")
+    if(textarea) {
+        textarea.value = ""
+    }
 }
 
 const loadData = async () => {
@@ -11,20 +18,21 @@ const loadData = async () => {
 }
 
 const makeConfig = async (data) => {
-    const config = {...oldConfig, ...data}
+    const config = {...currentConfig, ...data}
     return {config}
 }
 
 const addPreToConfig = (data) => {
     if (!data?.prePrompt) return data
-    const prePrompts = oldConfig?.prePrompts || []
+    const prePrompts = currentConfig?.prePrompts || []
+    console.log("🚀 ~ addPreToConfig ~ prePrompts:", prePrompts,  currentConfig?.prePrompts)
     prePrompts.push(data.prePrompt)
 
     return {prePrompts}
 }
 
 const removePreToConfig = (index) => {
-    const prePrompts = oldConfig?.prePrompts
+    const prePrompts = currentConfig?.prePrompts
 
     if (!prePrompts?.length) return
     
@@ -86,7 +94,7 @@ const prePromptEditMode = (prePrompt, li, index) => {
 const updatePreprompt = (li, index) => {
     const textareaValue = li.querySelector("textarea").value
 
-    const prePrompts = oldConfig.prePrompts
+    const prePrompts = currentConfig.prePrompts
 
     prePrompts[index] = textareaValue
 
@@ -137,11 +145,20 @@ const setupPrepromptsNode  = (config) => {
     }
 }
 
-const setupUrlNode = (config) => {
-    // url
-    const urlField = document.getElementById("url")
-    if (urlField) {
-        urlField.value = config?.url || ""
+const setupFormNode = (config) => {
+    // clean the api form if no config
+    if (!Object.keys(config).length) {
+        document.querySelector("form").reset()
+    }
+
+    // prefill the form
+    for (const [key, value] of Object.entries(config)) {
+        // console.log("🚀 ~ setupUrlNode ~ element:", element)
+        
+        const urlField = document.getElementById(key)
+        if (urlField) {
+            urlField.value = value || ""
+        }
     }
 }
 
@@ -156,11 +173,59 @@ const notifications = () => {
     setTimeout(() => {
         div.remove()
     }, 2000);
-    // console.log("dfja;sdfj", e)
+}
+
+async function textButtonOnClick(e) {
+    
+    const nodeText = this.innerText
+
+    this.innerText = "please wait ..."
+    
+    const errorAlert = (error) => {
+        alert(`Your configuration is wrong or the api might not accept requests from this extension. Check your api, the model version and CORS configuration \n\n Error: ${error?.message || error || ""}`)
+        console.error(error)
+        this.innerText = nodeText
+    }
+
+    if(!currentConfig?.url || !currentConfig?.model) {
+        errorAlert()
+        return
+    }
+
+    try {
+        const url = `${currentConfig.url}/api/generate`
+        const response = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify({
+                prompt: "Is very thing all good",
+                model: currentConfig.model
+            })
+        })
+        console.log("🚀 ~ textButtonOnClick ~ currentConfig.url:", currentConfig.url)
+        console.log("🚀 ~ textButtonOnClick ~ currentConfig.response:", response)
+        if (!response.ok) {
+            const error = (await response.json())?.error
+            errorAlert(error || response.statusText)
+            return
+        }
+        alert("All good")
+    } catch (error) {
+        errorAlert(error)
+    } finally {
+        // this.innertText = nodeText
+        this.innerText = nodeText
+    }
+}
+const setTestButton = () => {
+    const testButton = document.getElementById("test-config")
+
+    testButton.removeEventListener("click", textButtonOnClick)
+    testButton.addEventListener("click", textButtonOnClick)
 }
 
 const setUpNodes = (config) => { 
-    setupUrlNode(config)
+    setTestButton()
+    setupFormNode(config)
     setupPrepromptsNode(config)
 }
 
@@ -174,9 +239,9 @@ const domLoaded = async () => {
         deleteConfig()
     }) 
 
-    oldConfig = (await loadData("config"))?.config
+    currentConfig = (await loadData("config"))?.config || {}
     
-    setUpNodes(oldConfig)
+    setUpNodes(currentConfig)
 }
 
 
@@ -184,12 +249,10 @@ browser.storage.onChanged.addListener((changes, areaName) => {
     console.log(`Changes in storage area: ${areaName}`);
   
     for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
-        let configValue = {...oldValue, ...newValue }
-        
-        if (!newValue) {
-            configValue = {}
-        }
+        const configValue = newValue ? {...oldValue, ...newValue}: {}
+        currentConfig = configValue
         setUpNodes(configValue)
+        console.log("🚀 ~ browser.storage.onChanged.addListener ~ configValue:", configValue)
 
         notifications()
     }

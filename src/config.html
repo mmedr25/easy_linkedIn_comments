@@ -17,11 +17,23 @@
         <h2>Manage api</h2>
       <form class="submit-form form">
         <div class="input-container">
-          <label for="api-url">Url</label>
-          <input class="input" type="url" name="url" id="url" placeholder="https://example.com" required>
+          <label for="api-url">url</label>
+          <input class="input" type="url" name="url" id="url" placeholder="http://localhost:11434" required>
+        </div>
+        <div class="form-group">
+          <div class="input-container">
+            <label for="api-model">model</label>
+            <input class="input" type="text" name="model" id="model" placeholder="llama3.2-vision" required>
+          </div>
+          <div class="input-container">
+            <label for="api-count">suggestions count</label>
+            <input class="input" type="number" min="1" max="10" value="3" name="count" id="count" placeholder="3" required>
+            <p class="hint">the greater the count the longer the response time</p>
+          </div>
         </div>
         <div>
           <button class="button">save</button>
+          <button class="button muted" type="button" id="test-config">test api</button>
         </div>
       </form>
     </section>
